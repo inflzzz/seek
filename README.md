@@ -11,7 +11,7 @@ Buscador de arquivos para Windows, feito para quem tem milhões de arquivos e n�
 ![Windows 10 e 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white)
 ![Feito em Rust](https://img.shields.io/badge/feito%20em-Rust-b7410e?logo=rust&logoColor=white)
 
-### [⬇ Baixar o Seek.exe](https://github.com/inflzzz/seek/releases/latest/download/Seek.exe)
+### Baixe o Seek.exe na aba **Releases** deste repositório
 
 Um arquivo só. Não precisa instalar. Atualiza sozinho.
 
@@ -57,7 +57,7 @@ Um arquivo só. Não precisa instalar. Atualiza sozinho.
 
 ## Primeiros passos
 
-1. [Baixe o Seek.exe](https://github.com/inflzzz/seek/releases/latest/download/Seek.exe) e abra.
+1. Baixe o `Seek.exe` na aba **Releases** deste repositório e abra.
 2. Clique em **Escolher disco** (ou **Todos os discos**) e espere a primeira leitura.
 3. Digite. Pronto.
 
