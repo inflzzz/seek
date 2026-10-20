@@ -4,6 +4,8 @@
 
 **Ache qualquer arquivo do seu computador em milissegundos.**
 
+🇬🇧 [English version](README.en.md)
+
 Buscador de arquivos para Windows, feito para quem tem milhões de arquivos e não lembra onde guardou um.
 
 [![Versão](https://img.shields.io/github/v/release/inflzzz/seek?label=vers%C3%A3o&color=2ea44f)](https://github.com/inflzzz/seek/releases/latest)
