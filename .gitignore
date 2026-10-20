@@ -1,0 +1,10 @@
+/target/
+/indices/
+/ultima-pasta.velo
+/atalho.txt
+/tema.txt
+/modo-simples
+/seek-log.txt
+*.exe
+*.old
+chave*.txt

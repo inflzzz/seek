@@ -129,6 +129,34 @@ Pen drives e HDs externos entram em **Todos os discos**. Pasta de rede você esc
 - Não procura dentro dos arquivos nem recupera arquivos apagados.
 - Miniaturas de PDF e Office só aparecem se o Windows tiver o programa que as gera; RAW e HEIC dependem dos codecs instalados.
 
+## Código aberto
+
+O Seek é software livre, sob a [licença MIT](LICENSE). O código-fonte (Rust) está neste repositório.
+
+Para compilar você precisa do [Rust](https://rustup.rs) (edição 2024) no Windows:
+
+```
+cargo build --release
+```
+
+O programa sai em `target/release/Seek.exe`. Para rodar os testes: `cargo test`.
+
+Visão geral do código, em `src/`:
+
+| Arquivo | O que faz |
+|---|---|
+| `lib.rs` | Motor: índice, busca, filtros, ordenação, duplicados, arquivos parecidos |
+| `mft.rs` | Leitura direta da tabela de arquivos do NTFS (MFT) |
+| `watch.rs` | Acompanha o disco ao vivo (arquivo criado, apagado, renomeado) |
+| `ui.rs`, `main.rs` | Interface (egui) e aplicativo |
+| `tray.rs`, `hotkey.rs` | Bandeja do sistema e atalho global |
+| `icon_search.rs`, `thumbs.rs`, `shellthumb.rs` | Ícones, miniaturas e busca por ícone/foto parecida |
+| `update.rs` | Atualização automática pelas Releases do GitHub (confere SHA-256) |
+
+Contribuições são bem-vindas: abra uma issue ou um pull request.
+
+---
+
 ## Versões
 
 Veja as [versões publicadas](https://github.com/inflzzz/seek/releases) com as novidades de cada uma.
