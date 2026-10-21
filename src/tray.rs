@@ -60,25 +60,11 @@ pub fn quit() -> ! {
     std::process::exit(0)
 }
 
-/// Ícone do app (lupa branca), desenhado em código para não depender de arquivo.
+/// Ícone do app (assets/icon.png, embutido no programa).
 pub fn icon_rgba() -> (Vec<u8>, u32, u32) {
-    let n = 32u32;
-    let mut px = vec![0u8; (n * n * 4) as usize];
-    for y in 0..n {
-        for x in 0..n {
-            let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
-            let ring = ((fx - 13.).powi(2) + (fy - 13.).powi(2)).sqrt();
-            // distância ao cabo, um segmento de (20,20) a (28,28)
-            let (t, ox, oy) = (((fx - 20.) + (fy - 20.)) / 16., 20., 20.);
-            let t = t.clamp(0., 1.);
-            let handle = ((fx - (ox + 8. * t)).powi(2) + (fy - (oy + 8. * t)).powi(2)).sqrt();
-            if (7.5..=10.5).contains(&ring) || handle <= 2.2 {
-                let i = ((y * n + x) * 4) as usize;
-                px[i..i + 4].copy_from_slice(&[240, 240, 240, 255]);
-            }
-        }
-    }
-    (px, n, n)
+    let img = image::load_from_memory(include_bytes!("../assets/icon.png")).expect("assets/icon.png").to_rgba8();
+    let (w, h) = img.dimensions();
+    (img.into_raw(), w, h)
 }
 
 /// Verdadeiro enquanto a janela está "estacionada" na bandeja.

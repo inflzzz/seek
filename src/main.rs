@@ -110,6 +110,7 @@ struct App {
     scroll_y: f32,
     view_h: f32,
     scroll_to_cursor: bool,
+    keep: Option<(std::collections::HashSet<PathBuf>, Option<PathBuf>)>, // seleção e cursor a restaurar após uma busca ao vivo
     hl_terms: Vec<String>,
     hotkeys: Option<hotkey::Hotkeys>,
     settings: bool,
@@ -238,6 +239,7 @@ impl App {
             scroll_y: 0.,
             view_h: 0.,
             scroll_to_cursor: false,
+            keep: None,
             hl_terms: Vec::new(),
             hotkeys: hotkey::Hotkeys::install(&cc.egui_ctx),
             settings: false,
@@ -304,6 +306,19 @@ impl App {
         self.results.clear();
         self.cursor = 0;
         self.scroll_to_cursor = true;
+        self.send_search();
+    }
+    // Mudança ao vivo no disco: refaz a busca sem mexer na rolagem, no cursor nem na seleção (guardados por caminho).
+    fn refresh_search_live(&mut self, selected: std::collections::HashSet<PathBuf>, cursor: Option<PathBuf>) {
+        if self.dup.is_some() {
+            self.refresh_search();
+            return;
+        }
+        self.generation += 1;
+        self.keep = Some((selected, cursor));
+        self.send_search();
+    }
+    fn send_search(&mut self) {
         match Query::parse(&self.query) {
             Ok(query) => {
                 self.hl_terms = query.terms();
@@ -343,17 +358,21 @@ impl App {
         self.icon_status.clear();
         self.cancel = Arc::new(AtomicBool::new(false));
         self.progress = Arc::new(AtomicUsize::new(0));
+        // Reler a mesma pasta/disco (Atualizar): o índice antigo continua pesquisável durante a leitura.
+        let same_root = self.root.as_ref() == Some(&root) && !self.entries.is_empty();
         self.root = Some(root.clone());
-        self.entries = Arc::new(Vec::new());
-        self.results.clear();
+        if !same_root {
+            self.entries = Arc::new(Vec::new());
+            self.results.clear();
+            self.kind_counts = [0; Kind::ALL.len()];
+            self.ext_counts.clear();
+        }
         self.selected.clear();
         self.thumbs = thumbs::Thumbs::new(ctx);
         self.watchers.clear();
         *self.live.lock().unwrap() = Default::default();
         self.live_overflow = false;
         self.live_dirty_at = None;
-        self.kind_counts = [0; Kind::ALL.len()];
-        self.ext_counts.clear();
         self.generation += 1;
         self.searching = false;
         let (tx, rx) = mpsc::channel();

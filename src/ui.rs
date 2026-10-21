@@ -289,8 +289,11 @@ fn open_file(path: &std::path::Path) {
     let _ = std::process::Command::new("explorer.exe").arg(path).spawn();
 }
 fn reveal(path: &std::path::Path) {
+    use std::os::windows::process::CommandExt;
+    // O Explorer só entende `/select,"caminho"` com as aspas no caminho; `.arg` aspeia o argumento inteiro,
+    // e com espaço ou acento no caminho ele abria só a raiz do disco (ex.: D:).
     let _ = std::process::Command::new("explorer.exe")
-        .arg(format!("/select,{}", path.display()))
+        .raw_arg(format!("/select,\"{}\"", path.display()))
         .spawn();
 }
 // Texto de uma linha que termina em "…" quando não cabe em `w`.
@@ -529,6 +532,12 @@ impl eframe::App for App {
         while let Ok(answer) = self.answers.try_recv() {
             if answer.generation == self.generation {
                 self.results = answer.indices;
+                if let Some((sel, cur)) = self.keep.take() {
+                    self.selected = self.results.iter().copied().filter(|&i| sel.contains(self.entries[i].path())).collect();
+                    self.cursor = cur
+                        .and_then(|c| self.results.iter().position(|&i| self.entries[i].path() == c.as_path()))
+                        .unwrap_or_else(|| self.cursor.min(self.results.len().saturating_sub(1)));
+                }
                 self.elapsed = answer.elapsed;
                 self.searching = false;
             }
@@ -584,6 +593,8 @@ impl eframe::App for App {
             ctx.request_repaint_after(Duration::from_millis(500));
             let calm = now - self.last_input > 1.5 || pending_len > 20_000;
             if calm && !scanning && !busy && !icon_scanning && self.icon_reference.is_none() {
+                let keep_sel: std::collections::HashSet<PathBuf> = self.selected.iter().filter_map(|&i| self.entries.get(i)).map(|e| e.path().to_path_buf()).collect();
+                let keep_cur = self.results.get(self.cursor).and_then(|&i| self.entries.get(i)).map(|e| e.path().to_path_buf());
                 match Arc::try_unwrap(std::mem::take(&mut self.entries)) {
                     Ok(mut v) => {
                         let update = self.live.lock().unwrap().take();
@@ -601,8 +612,8 @@ impl eframe::App for App {
                             self.icon_catalog = None; // as assinaturas são por posição no índice
                             self.icon_catalog_complete = false;
                             self.recount();
-                            self.thumbs = thumbs::Thumbs::new(ctx);
-                            self.refresh_search();
+                            self.thumbs = thumbs::Thumbs::new(ctx); // as miniaturas são por posição no índice
+                            self.refresh_search_live(keep_sel, keep_cur);
                             self.live_dirty_at = Some(now);
                         }
                     }
