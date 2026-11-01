@@ -9,12 +9,21 @@ use std::{
     time::Instant,
 };
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
+#[cfg(windows)]
+pub mod cleanup;
 pub mod clock;
+#[cfg(windows)]
+pub mod games;
+pub mod history;
 pub mod icon_search;
+pub mod knowledge;
+pub mod space;
 pub mod log;
 #[cfg(windows)]
 pub mod shellthumb;
 pub mod update;
+#[cfg(windows)]
+pub mod usn;
 #[cfg(windows)]
 pub mod watch;
 #[cfg(windows)]
@@ -894,8 +903,8 @@ impl Pending {
     }
 }
 /// Aplica as mudanças ao índice (ordenado por `searchable`, como o `scan` o entrega). `true` se algo mudou.
-/// Pasta apagada leva todo o conteúdo junto.
-pub fn apply_update(entries: &mut Vec<Entry>, update: Update) -> bool {
+/// Pasta apagada leva todo o conteúdo junto. Em `deltas` ficam os arquivos que entraram, saíram ou mudaram de tamanho.
+pub fn apply_update(entries: &mut Vec<Entry>, update: Update, deltas: &mut Vec<history::Delta>) -> bool {
     let Update { upserts: mut fresh, removed } = update;
     // Trechos do índice a descartar: caminhos apagados, seus filhos, e versões antigas do que foi recriado.
     let mut ranges: Vec<(usize, usize)> = Vec::new();
@@ -933,6 +942,22 @@ pub fn apply_update(entries: &mut Vec<Entry>, update: Update) -> bool {
     }
     fresh.sort_unstable_by(|a, b| a.searchable.cmp(&b.searchable));
     fresh.dedup_by(|a, b| a.searchable == b.searchable);
+    {
+        let at = clock::now_secs();
+        let mut gone: std::collections::HashMap<&str, &Entry> = std::collections::HashMap::new();
+        for &(lo, hi) in &merged {
+            for e in &entries[lo..hi] {
+                gone.insert(&e.searchable, e);
+            }
+        }
+        for f in &fresh {
+            match gone.remove(&*f.searchable) {
+                Some(o) if o.bytes == f.bytes => {}
+                o => deltas.push(history::Delta { at, old: o.map(|o| o.bytes), new: Some(f.bytes), path: f.path_str().into() }),
+            }
+        }
+        deltas.extend(gone.into_values().map(|o| history::Delta { at, old: Some(o.bytes), new: None, path: o.path_str().into() }));
+    }
     let old = std::mem::take(entries);
     let mut out = Vec::with_capacity(old.len() + fresh.len());
     let (mut fresh, mut skip) = (fresh.into_iter().peekable(), merged.into_iter().peekable());
@@ -1053,7 +1078,7 @@ pub fn apply_changes(entries: &mut Vec<Entry>, changes: Vec<Change>) -> bool {
     for change in changes {
         pending.merge(resolve(change));
     }
-    apply_update(entries, pending.take())
+    apply_update(entries, pending.take(), &mut Vec::new())
 }
 
 // Hard links allow a same-volume move without replacing an existing destination.
@@ -1167,6 +1192,33 @@ mod tests {
         assert_eq!(names, vec![("b.txt", 5), ("c.txt", 4)]);
         assert!(idx.windows(2).all(|w| w[0].searchable <= w[1].searchable));
         assert!(!apply_changes(&mut idx, vec![Change::Overflow]));
+        let _ = fs::remove_dir_all(dir);
+    }
+    #[test]
+    fn live_changes_report_deltas() {
+        let dir = std::env::temp_dir().join(format!("seek-delta-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("p")).unwrap();
+        fs::write(dir.join("p/a.txt"), b"1").unwrap();
+        fs::write(dir.join("p/b.txt"), b"22").unwrap();
+        fs::write(dir.join("c.txt"), b"333").unwrap();
+        let mut idx = scan(&dir, &AtomicBool::new(false), &AtomicUsize::new(0)).entries.to_vec();
+        fs::remove_dir_all(dir.join("p")).unwrap();
+        fs::write(dir.join("c.txt"), b"3333").unwrap();
+        fs::write(dir.join("d.txt"), b"").unwrap();
+        let mut pending = Pending::default();
+        for c in [Change::Remove(dir.join("p")), Change::Modified(dir.join("c.txt")), Change::Upsert(dir.join("d.txt"))] {
+            pending.merge(resolve(c));
+        }
+        let mut deltas = Vec::new();
+        assert!(apply_update(&mut idx, pending.take(), &mut deltas));
+        let mut got: Vec<(String, Option<u64>, Option<u64>)> =
+            deltas.iter().map(|d| (Path::new(&*d.path).file_name().unwrap().to_string_lossy().into_owned(), d.old, d.new)).collect();
+        got.sort();
+        assert_eq!(
+            got,
+            vec![("a.txt".into(), Some(1), None), ("b.txt".into(), Some(2), None), ("c.txt".into(), Some(3), Some(4)), ("d.txt".into(), None, Some(0))]
+        );
         let _ = fs::remove_dir_all(dir);
     }
     #[test]

@@ -171,6 +171,36 @@ pub fn hide_window() {
     PARKED.store(true, Ordering::SeqCst);
 }
 
+/// Aviso na bandeja (balão / notificação do Windows) saindo do ícone do Seek.
+pub fn notify(title: &str, text: &str) {
+    use windows_sys::Win32::UI::Shell::{NIF_INFO, NIIF_INFO, NIM_MODIFY, NOTIFYICONDATAW, Shell_NotifyIconW};
+    // O tray-icon cria uma janela da classe "tray_icon_app" e numera os ícones a partir de 1.
+    let class: Vec<u16> = "tray_icon_app".encode_utf16().chain(Some(0)).collect();
+    let hwnd = unsafe { FindWindowW(class.as_ptr(), std::ptr::null()) };
+    if hwnd.is_null() {
+        return;
+    }
+    let mut data: NOTIFYICONDATAW = unsafe { std::mem::zeroed() };
+    data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+    data.hWnd = hwnd;
+    data.uFlags = NIF_INFO;
+    data.dwInfoFlags = NIIF_INFO;
+    let copy = |dst: &mut [u16], s: &str| {
+        let room = dst.len() - 1;
+        for (d, c) in dst.iter_mut().zip(s.encode_utf16().take(room)) {
+            *d = c;
+        }
+    };
+    copy(&mut data.szInfoTitle, title);
+    copy(&mut data.szInfo, text);
+    for id in 0..8 {
+        data.uID = id;
+        if unsafe { Shell_NotifyIconW(NIM_MODIFY, &data) } != 0 {
+            return;
+        }
+    }
+}
+
 /// Cria o ícone da bandeja. Precisa ser chamado na thread principal e o resultado mantido vivo.
 pub fn install(ctx: &egui::Context) -> bool {
     let menu = Menu::new();

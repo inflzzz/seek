@@ -1,4 +1,4 @@
-﻿// Interface da aplicação. O design pode ser alterado aqui sem mudar o motor de busca.
+// Interface da aplicação. O design pode ser alterado aqui sem mudar o motor de busca.
 use super::*;
 use crate::PreviewData;
 use crate::hotkey;
@@ -11,19 +11,19 @@ fn pick(dark: (u8, u8, u8), light: (u8, u8, u8)) -> Color32 {
     let (r, g, b) = if LIGHT.load(std::sync::atomic::Ordering::Relaxed) { light } else { dark };
     Color32::from_rgb(r, g, b)
 }
-fn c_bg() -> Color32 { pick((12, 12, 12), (250, 250, 250)) }
-fn c_panel() -> Color32 { pick((17, 17, 17), (241, 241, 241)) }
-fn c_hover() -> Color32 { pick((24, 24, 24), (233, 233, 233)) }
-fn c_sel() -> Color32 { pick((34, 34, 34), (221, 221, 221)) }
-fn c_tile() -> Color32 { pick((28, 28, 28), (229, 229, 229)) }
-fn c_line() -> Color32 { pick((30, 30, 30), (224, 224, 224)) }
-fn c_text() -> Color32 { pick((237, 237, 237), (26, 26, 26)) }
-fn c_dim() -> Color32 { pick((154, 154, 154), (96, 96, 96)) }
-fn c_mute() -> Color32 { pick((102, 102, 102), (140, 140, 140)) }
-fn c_border() -> Color32 { pick((42, 42, 42), (205, 205, 205)) }
-fn c_hover2() -> Color32 { pick((48, 48, 48), (210, 210, 210)) }
-fn c_mark_bg() -> Color32 { pick((70, 70, 70), (255, 226, 130)) }
-fn c_mark_fg() -> Color32 { pick((255, 255, 255), (20, 20, 20)) }
+pub(crate) fn c_bg() -> Color32 { pick((12, 12, 12), (250, 250, 250)) }
+pub(crate) fn c_panel() -> Color32 { pick((17, 17, 17), (241, 241, 241)) }
+pub(crate) fn c_hover() -> Color32 { pick((24, 24, 24), (233, 233, 233)) }
+pub(crate) fn c_sel() -> Color32 { pick((34, 34, 34), (221, 221, 221)) }
+pub(crate) fn c_tile() -> Color32 { pick((28, 28, 28), (229, 229, 229)) }
+pub(crate) fn c_line() -> Color32 { pick((30, 30, 30), (224, 224, 224)) }
+pub(crate) fn c_text() -> Color32 { pick((237, 237, 237), (26, 26, 26)) }
+pub(crate) fn c_dim() -> Color32 { pick((154, 154, 154), (96, 96, 96)) }
+pub(crate) fn c_mute() -> Color32 { pick((102, 102, 102), (140, 140, 140)) }
+pub(crate) fn c_border() -> Color32 { pick((42, 42, 42), (205, 205, 205)) }
+pub(crate) fn c_hover2() -> Color32 { pick((48, 48, 48), (210, 210, 210)) }
+pub(crate) fn c_mark_bg() -> Color32 { pick((70, 70, 70), (255, 226, 130)) }
+pub(crate) fn c_mark_fg() -> Color32 { pick((255, 255, 255), (20, 20, 20)) }
 fn theme_file() -> Option<PathBuf> {
     Some(std::env::current_exe().ok()?.parent()?.join("tema.txt"))
 }
@@ -131,7 +131,7 @@ pub fn theme(ctx: &egui::Context) {
     });
 }
 
-fn bytes(n: u64) -> String {
+pub(crate) fn bytes(n: u64) -> String {
     if n >= 1_073_741_824 {
         format!("{:.1} GB", n as f64 / 1_073_741_824.)
     } else if n >= 1_048_576 {
@@ -150,7 +150,7 @@ fn short_count(n: usize) -> String {
     }
 }
 // Discos locais (letra, total, livre) via Windows; ignora leitores sem mídia.
-fn list_drives() -> Vec<(PathBuf, u64, u64)> {
+pub(crate) fn list_drives() -> Vec<(PathBuf, u64, u64)> {
     use windows_sys::Win32::Storage::FileSystem::{GetDiskFreeSpaceExW, GetLogicalDrives};
     let mask = unsafe { GetLogicalDrives() };
     let mut out = Vec::new();
@@ -186,7 +186,7 @@ fn similar_menu(ui: &mut egui::Ui, e: &Entry) -> Option<u8> {
     pick
 }
 // ---- datas ----
-fn fmt_date(secs: u64) -> String {
+pub(crate) fn fmt_date(secs: u64) -> String {
     velo::clock::format_local(secs)
 }
 fn sort_label(k: velo::SortKey) -> &'static str {
@@ -269,7 +269,7 @@ fn save_compact(on: bool) {
     }
 }
 // Reabre o programa pedindo permissão de administrador (janela de confirmação do Windows).
-fn relaunch_as_admin(root: &std::path::Path) {
+pub(crate) fn relaunch_as_admin(root: &std::path::Path) {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::UI::Shell::ShellExecuteW;
     let wide = |s: &std::ffi::OsStr| -> Vec<u16> { s.encode_wide().chain(Some(0)).collect() };
@@ -285,10 +285,10 @@ fn relaunch_as_admin(root: &std::path::Path) {
         ShellExecuteW(std::ptr::null_mut(), verb.as_ptr(), wide(exe.as_os_str()).as_ptr(), params.as_ptr(), std::ptr::null(), 1);
     }
 }
-fn open_file(path: &std::path::Path) {
+pub(crate) fn open_file(path: &std::path::Path) {
     let _ = std::process::Command::new("explorer.exe").arg(path).spawn();
 }
-fn reveal(path: &std::path::Path) {
+pub(crate) fn reveal(path: &std::path::Path) {
     use std::os::windows::process::CommandExt;
     // O Explorer só entende `/select,"caminho"` com as aspas no caminho; `.arg` aspeia o argumento inteiro,
     // e com espaço ou acento no caminho ele abria só a raiz do disco (ex.: D:).
@@ -297,7 +297,7 @@ fn reveal(path: &std::path::Path) {
         .spawn();
 }
 // Texto de uma linha que termina em "…" quando não cabe em `w`.
-fn clipped(ui: &egui::Ui, text: &str, font: FontId, color: Color32, w: f32) -> std::sync::Arc<egui::Galley> {
+pub(crate) fn clipped(ui: &egui::Ui, text: &str, font: FontId, color: Color32, w: f32) -> std::sync::Arc<egui::Galley> {
     let mut job = egui::text::LayoutJob::simple_singleline(text.to_owned(), font, color);
     job.wrap.max_width = w.max(10.);
     job.wrap.max_rows = 1;
@@ -305,12 +305,12 @@ fn clipped(ui: &egui::Ui, text: &str, font: FontId, color: Color32, w: f32) -> s
     job.wrap.overflow_character = Some('…');
     ui.painter().layout_job(job)
 }
-fn primary(text: &str) -> egui::Button<'static> {
+pub(crate) fn primary(text: &str) -> egui::Button<'static> {
     egui::Button::new(RichText::new(text.to_owned()).color(c_bg()).strong())
         .fill(c_text())
         .corner_radius(4)
 }
-fn flat(text: &str) -> egui::Button<'static> {
+pub(crate) fn flat(text: &str) -> egui::Button<'static> {
     egui::Button::new(RichText::new(text.to_owned())).frame(false)
 }
 fn check(painter: &egui::Painter, at: Pos2, boxed: bool) {
@@ -514,6 +514,14 @@ impl eframe::App for App {
                 && self.root.as_deref().is_some_and(|r| velo::mft::drive_letter(r).is_some() || velo::is_all(r))
                 && !velo::mft::can_read_volumes();
             velo::log::line(&format!("índice pronto: {} arquivos", scan.entries.len()));
+            // Releitura do mesmo disco: o que mudou entre o índice antigo e o novo vai para o histórico.
+            if !scan.cached && !scan.cancelled && !self.entries.is_empty() {
+                self.space.record_diff(self.entries.clone(), scan.entries.clone());
+            }
+            // Índice salvo carregado: com administrador, relê em segundos para achar o que mudou com o Seek fechado.
+            let recover = scan.cached
+                && velo::mft::can_read_volumes()
+                && self.root.as_deref().is_some_and(|r| velo::mft::drive_letter(r).is_some() || velo::is_all(r));
             self.entries = scan.entries;
             if let Some(root) = &self.root {
                 crate::tray::remember(root, &self.entries);
@@ -528,6 +536,10 @@ impl eframe::App for App {
             *self.live.lock().unwrap() = Default::default();
             self.live_overflow = false;
             self.refresh_search();
+            if recover && let Some(root) = self.root.clone() {
+                velo::log::line("relendo para achar o que mudou com o Seek fechado");
+                self.start_scan(ctx, root, false);
+            }
         }
         while let Ok(answer) = self.answers.try_recv() {
             if answer.generation == self.generation {
@@ -599,10 +611,12 @@ impl eframe::App for App {
                     Ok(mut v) => {
                         let update = self.live.lock().unwrap().take();
                         let (added, removed) = (update.upserts.len(), update.removed.len());
-                        let changed = velo::apply_update(&mut v, update);
+                        let mut deltas = Vec::new();
+                        let changed = velo::apply_update(&mut v, update, &mut deltas);
                         if changed {
                             velo::log::line(&format!("mudanças ao vivo aplicadas: {added} novos ou alterados, {removed} removidos"));
                         }
+                        self.space.record(deltas);
                         self.entries = Arc::new(v);
                         if let Some(root) = &self.root {
                             crate::tray::remember(root, &self.entries);
@@ -635,6 +649,7 @@ impl eframe::App for App {
                 ctx.request_repaint_after(Duration::from_secs(5));
             }
         }
+        self.space_tick(ctx);
         if self.viewer.is_some() && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             self.close_viewer();
         }
@@ -775,6 +790,19 @@ impl eframe::App for App {
                 ui.horizontal_centered(|ui| {
                     ui.label(RichText::new("seek").size(15.).color(c_dim()));
                     ui.add_space(14.);
+                    if !compact {
+                        if ui.selectable_label(!self.space.on, "Busca").clicked() {
+                            self.space.on = false;
+                            self.focus_search = true;
+                        }
+                        if ui.selectable_label(self.space.on, "Espaço").clicked() {
+                            self.space.on = true;
+                        }
+                        ui.add_space(14.);
+                    }
+                    if self.space.on {
+                        self.space_tabs(ui);
+                    } else {
                     let w = (ui.available_width() - 400.).max(200.);
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.query)
@@ -846,8 +874,10 @@ impl eframe::App for App {
                         }
                     }
                     ctx.data_mut(|d| d.insert_temp(egui::Id::new("sug_hot"), over));
+                    }
+                    let space = self.space.on;
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                        if ui
+                        if !space && ui
                             .add(flat(if compact { "Modo completo" } else { "Modo simples" }))
                             .clicked()
                         {
@@ -862,10 +892,10 @@ impl eframe::App for App {
                         if ui.add(flat("Configurações")).clicked() {
                             self.settings = true;
                         }
-                        if !compact && ui.add_enabled(!self.help, flat("Ajuda")).clicked() {
+                        if !compact && !space && ui.add_enabled(!self.help, flat("Ajuda")).clicked() {
                             self.help = true;
                         }
-                        if !compact && ui
+                        if !compact && !space && ui
                             .add_enabled(self.root.is_some() && !scanning && !busy, flat("Buscar por ícone"))
                             .clicked()
                             && let Some(path) = rfd::FileDialog::new()
@@ -887,6 +917,9 @@ impl eframe::App for App {
                     });
                 });
             });
+        if self.space.on {
+            self.space_ui(ctx);
+        } else {
         if self.icon_reference.is_some() {
             egui::TopBottomPanel::top("iconbar")
                 .frame(egui::Frame::new().fill(c_panel()).inner_margin(egui::Margin::symmetric(18, 8)))
@@ -1450,6 +1483,7 @@ impl eframe::App for App {
                 self.start_similar(ctx, i, mode);
             }
         }
+        }
         // Pré-visualização em tela cheia (F3 ou Espaço): imagem grande ou o começo do texto.
         if let Some(index) = self.viewer {
             if let Some(data) = self.viewer_rx.as_ref().and_then(|rx| rx.try_recv().ok()) {
@@ -1598,7 +1632,7 @@ impl eframe::App for App {
                     });
                     ui.add_space(10.);
                     let mut on = self.autostart;
-                    if ui.checkbox(&mut on, "Abrir junto com o Windows (fica na bandeja)").changed() {
+                    if ui.checkbox(&mut on, "Abrir junto com o Windows, como administrador (fica na bandeja)").changed() {
                         match crate::startup::set_enabled(on) {
                             Ok(()) => {
                                 self.autostart = on;

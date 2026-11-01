@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod hotkey;
+mod space_ui;
 mod startup;
 mod thumbs;
 mod tray;
@@ -133,6 +134,7 @@ struct App {
     thumbs: thumbs::Thumbs,
     kind_counts: [usize; Kind::ALL.len()],
     ext_counts: Vec<(String, Kind, usize)>,
+    space: space_ui::SpaceState,
 }
 impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -262,6 +264,7 @@ impl App {
             thumbs: thumbs::Thumbs::new(&cc.egui_ctx),
             kind_counts: [0; Kind::ALL.len()],
             ext_counts: Vec::new(),
+            space: space_ui::SpaceState::new(),
         };
         // Atualização automática: confere o GitHub em segundo plano; falhas (sem internet) são silenciosas.
         if let Ok(exe) = std::env::current_exe() {

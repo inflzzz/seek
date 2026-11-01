@@ -20,14 +20,14 @@ const ROOT_RECORD: u32 = 5;
 const FIRST_USER_RECORD: u32 = 24; // 0..23 são arquivos internos do NTFS ($MFT, $Bitmap...)
 const CHUNK: usize = 8 << 20;
 
-struct Volume(HANDLE);
+pub(crate) struct Volume(pub(crate) HANDLE);
 impl Drop for Volume {
     fn drop(&mut self) {
         unsafe { CloseHandle(self.0) };
     }
 }
 impl Volume {
-    fn open(letter: char) -> Result<Self, String> {
+    pub(crate) fn open(letter: char) -> Result<Self, String> {
         let name: Vec<u16> = format!("\\\\.\\{letter}:").encode_utf16().chain(Some(0)).collect();
         let h = unsafe {
             CreateFileW(name.as_ptr(), 0x8000_0000, 1 | 2, std::ptr::null(), 3, 0, std::ptr::null_mut())

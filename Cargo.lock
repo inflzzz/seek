@@ -3437,6 +3437,7 @@ name = "velo"
 version = "0.3.0"
 dependencies = [
  "eframe",
+ "flate2",
  "global-hotkey",
  "image",
  "rayon",
